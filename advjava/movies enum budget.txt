@@ -1,0 +1,156 @@
+import javax.persistence.Entity;
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.validation.constraints.NotBlank;
+import java.time.LocalDate;
+
+@Entity
+public class Movie {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long movieNo;
+
+    @NotBlank
+    private String movieName;
+
+    @Enumerated(EnumType.STRING)
+    private Category category;
+
+    private LocalDate releaseDate;
+
+    private double budget;
+
+    private String director;
+
+    // Constructors, getters, and setters
+
+}
+
+
+
+
+----------------
+public enum Category {
+    BOLLYWOOD,
+    TOLLYWOOD,
+    HOLLYWOOD
+}
+-------------
+public class MovieDTO {
+
+    @NotBlank
+    private String movieName;
+
+    @Enumerated(EnumType.STRING)
+    private Category category;
+
+    private LocalDate releaseDate;
+
+    private double budget;
+
+    // Constructors, getters, and setters
+
+}
+-----------------
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.*;
+
+import javax.validation.Valid;
+import java.util.List;
+
+@RestController
+@RequestMapping("/movies")
+public class MovieController {
+
+    private final MovieService movieService;
+
+    @Autowired
+    public MovieController(MovieService movieService) {
+        this.movieService = movieService;
+    }
+
+    @PostMapping
+    public ResponseEntity<Movie> addMovie(@Valid @RequestBody MovieDTO movieDTO) {
+        Movie movie = movieService.addMovie(movieDTO);
+        return ResponseEntity.status(HttpStatus.CREATED).body(movie);
+    }
+
+    @PutMapping("/{movieNo}")
+    public ResponseEntity<Movie> updateMovie(@PathVariable Long movieNo, @Valid @RequestBody MovieDTO movieDTO) {
+        Movie updatedMovie = movieService.updateMovie(movieNo, movieDTO);
+        if (updatedMovie == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(updatedMovie);
+    }
+
+    @GetMapping
+    public ResponseEntity<List<Movie>> getMoviesByName(@RequestParam("name") String movieName) {
+        List<Movie> movies = movieService.getMoviesByName(movieName);
+        if (movies.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(movies);
+    }
+}
+-------------------
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+
+@Service
+public class MovieService {
+
+    private final MovieRepository movieRepository;
+
+    @Autowired
+    public MovieService(MovieRepository movieRepository) {
+        this.movieRepository = movieRepository;
+    }
+
+    public Movie addMovie(MovieDTO movieDTO) {
+        Movie movie = new Movie();
+        movie.setMovieName(movieDTO.getMovieName());
+        movie.setCategory(movieDTO.getCategory());
+        movie.setReleaseDate(movieDTO.getReleaseDate());
+        movie.setBudget(movieDTO.getBudget());
+        // Set other properties as needed
+
+        return movieRepository.save(movie);
+    }
+
+    public Movie updateMovie(Long movieNo, MovieDTO movieDTO) {
+        Movie movie = movieRepository.findById(movieNo).orElse(null);
+        if (movie == null) {
+            return null;
+        }
+
+        movie.setReleaseDate(movieDTO.getReleaseDate());
+        movie.setBudget(movieDTO.getBudget());
+        // Update other properties as needed
+
+        return movieRepository.save(movie);
+    }
+
+    public List<Movie> getMoviesByName(String movieName) {
+        return movieRepository.findByMovieName(movieName);
+    }
+}
+-----------------
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import java.util.List;
+
+public interface MovieRepository extends JpaRepository<Movie, Long> {
+
+    List<Movie> findByMovieName(String movieName);
+}
+-------------------------

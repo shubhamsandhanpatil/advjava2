@@ -1,0 +1,179 @@
+import javax.persistence.Entity;
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.Positive;
+import java.time.LocalTime;
+
+@Entity
+public class Railway {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @NotBlank
+    private String name;
+
+    @Enumerated(EnumType.STRING)
+    private Category category;
+
+    private LocalTime startTime;
+
+    private LocalTime endTime;
+
+    @NotBlank
+    private String source;
+
+    @NotBlank
+    private String destination;
+
+    @Positive
+    private int distance;
+
+    @Positive
+    private int frequency;
+
+    // Constructors, getters, and setters
+
+}
+
+
+---------------
+public enum Category {
+    EXPRESS,
+    SHATABDI,
+    AC,
+    METRO
+}
+------------
+public class RailwayDTO {
+
+    @NotBlank
+    private String name;
+
+    @Enumerated(EnumType.STRING)
+    private Category category;
+
+    private LocalTime startTime;
+
+    private LocalTime endTime;
+
+    @NotBlank
+    private String source;
+
+    @NotBlank
+    private String destination;
+
+    @Positive
+    private int distance;
+
+    @Positive
+    private int frequency;
+
+    // Constructors, getters, and setters
+
+}
+
+
+------------
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.*;
+
+import javax.validation.Valid;
+import java.util.List;
+
+@RestController
+@RequestMapping("/railways")
+public class RailwayController {
+
+    private final RailwayService railwayService;
+
+    @Autowired
+    public RailwayController(RailwayService railwayService) {
+        this.railwayService = railwayService;
+    }
+
+    @PostMapping
+    public ResponseEntity<Railway> addRailway(@Valid @RequestBody RailwayDTO railwayDTO) {
+        Railway railway = railwayService.addRailway(railwayDTO);
+        return ResponseEntity.status(HttpStatus.CREATED).body(railway);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteRailway(@PathVariable Long id) {
+        if (railwayService.deleteRailway(id)) {
+            return ResponseEntity.ok().build();
+        }
+        return ResponseEntity.notFound().build();
+    }
+
+    @GetMapping
+    public ResponseEntity<List<Railway>> getRailwaysByCategory(@RequestParam("category") Category category) {
+        List<Railway> railways = railwayService.getRailwaysByCategory(category);
+        if (railways.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(railways);
+    }
+}
+--------------------
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+
+@Service
+public class RailwayService {
+
+    private final RailwayRepository railwayRepository;
+
+    @Autowired
+    public RailwayService(RailwayRepository railwayRepository) {
+        this.railwayRepository = railwayRepository;
+    }
+
+    public Railway addRailway(RailwayDTO railwayDTO) {
+        Railway railway = new Railway();
+        railway.setName(railwayDTO.getName());
+        railway.setCategory(railwayDTO.getCategory());
+        railway.setStartTime(railwayDTO.getStartTime());
+        railway.setEndTime(railwayDTO.getEndTime());
+        railway.setSource(railwayDTO.getSource());
+        railway.setDestination(railwayDTO.getDestination());
+        railway.setDistance(railwayDTO.getDistance());
+        railway.setFrequency(railwayDTO.getFrequency());
+        // Set other properties as needed
+
+        return railwayRepository.save(railway);
+    }
+
+    public boolean deleteRailway(Long id) {
+        if (railwayRepository.existsById(id)) {
+            railwayRepository.deleteById(id);
+            return true;
+        }
+        return false;
+    }
+
+    public List<Railway> getRailwaysByCategory(Category category) {
+        return railwayRepository.findByCategory(category);
+    }
+}
+-----------------
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import java.util.List;
+
+public interface RailwayRepository extends JpaRepository<Railway, Long> {
+
+    List<Railway> findByCategory(Category category);
+}
+
